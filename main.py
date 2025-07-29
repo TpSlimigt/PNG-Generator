@@ -49,6 +49,15 @@ def create_image_data(width, height):
     return image_data
 
 
+def apply_filter(image_data, width):
+    filtered_data = bytearray()
+    for row_start in range(0, len(image_data), width * 4):
+        row_data = image_data[row_start : row_start + width * 4]
+        filtered_data.append(0)
+        filtered_data.extend(row_data)
+    return bytes(filtered_data)
+
+
 def compress_data(data):
     return zlib.compress(data)
 
@@ -78,12 +87,17 @@ def create_png_file():
     ihdr_chunk = create_data_chunk(b"IHDR", create_ihdr_data())
 
     image_data = create_image_data(WIDTH, HEIGHT)
-    compressed_data = compress_data(image_data)
+    filtered_data = apply_filter(image_data, WIDTH)
+    compressed_data = compress_data(filtered_data)
     idat_chunk = create_data_chunk(b"IDAT", compressed_data)
 
     iend_chunk = create_data_chunk(b"IEND", create_iend_data())
 
-    print(PNG_SIGNATURE + ihdr_chunk + idat_chunk + iend_chunk)
+    with open("output.png", "wb") as png_file:
+        png_file.write(PNG_SIGNATURE)
+        png_file.write(ihdr_chunk)
+        png_file.write(idat_chunk)
+        png_file.write(iend_chunk)
 
 
 if __name__ == "__main__":
