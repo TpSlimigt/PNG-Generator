@@ -25,7 +25,7 @@ FILTER_METHOD = 0  # Filter method
 INTERLACE_METHOD = 0  # Interlace method
 
 
-def create_ihdr_chunk():
+def create_ihdr_data():
     ihdr_data = struct.pack(
         "!IIBBBBB",
         WIDTH,
@@ -41,10 +41,50 @@ def create_ihdr_chunk():
 
 # IDAT chunk checklist:
 # Compressed image data (variable length)
-# CRC (4-bytes)
+
+
+def create_image_data(width, height):
+    solid_red_color = struct.pack("!BBBB", 255, 0, 0, 255)  # Solid red color (RGBA)
+    image_data = solid_red_color * (width * height)
+    return image_data
+
+
+def compress_data(data):
+    return zlib.compress(data)
+
 
 # IEND chunk checklist:
 # Empty chunk with type IEND (empty data)
 
+
+def create_iend_data():
+    return b""
+
+
+# Chunk checklist:
+# Length of bytes in data (4-bytes)
+# Type (IHDR,IDAT,IEND 4-bytes)
+# Data (variable length)
+# CRC (4-bytes)
+
+
+def create_data_chunk(data_type, data):
+    data_length = len(data)
+    crc = zlib.crc32(data_type + data)
+    return struct.pack("!I", data_length) + data_type + data + struct.pack("!I", crc)
+
+
+def create_png_file():
+    ihdr_chunk = create_data_chunk(b"IHDR", create_ihdr_data())
+
+    image_data = create_image_data(WIDTH, HEIGHT)
+    compressed_data = compress_data(image_data)
+    idat_chunk = create_data_chunk(b"IDAT", compressed_data)
+
+    iend_chunk = create_data_chunk(b"IEND", create_iend_data())
+
+    print(PNG_SIGNATURE + ihdr_chunk + idat_chunk + iend_chunk)
+
+
 if __name__ == "__main__":
-    print(PNG_SIGNATURE + create_ihdr_chunk())
+    create_png_file()
